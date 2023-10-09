@@ -1,0 +1,12 @@
+[package]
+name = "asm-cdf8"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name="asm-cdf8"
+path="asm-cdf8.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
