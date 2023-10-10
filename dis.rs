@@ -63,7 +63,7 @@ pub struct ALU {
 pub enum MoveSource {
     Literal(u8),
     Register(SourceRegister),
-    Constants(u8),
+    Constant(u8),
 }
 
 #[derive(FromRepr, Debug, PartialEq, Clone)]
@@ -313,7 +313,7 @@ impl TwoBoard {
                            (word & 0b0001_0000_0000_0000)!=0, // Group 2 Constants
                            (word & 0b0000_1000_0000_0000)!=0, // Data Path/GP
                            (word & 0b0000_0111_1000_0000)>>7) { // Source Address
-                               (true,  group2,  false, addr)   => MoveSource::Constants(if group2 { 0b1_0000 } else { 0 } | addr as u8),
+                               (true,  group2,  false, addr)   => MoveSource::Constant(if group2 { 0b1_0000 } else { 0 } | addr as u8),
                                (false, _,       false, reg)    => MoveSource::Register(SourceRegister::from_repr(reg as u8).ok_or_else(|| format!("Unknown source register: {}, {:#b} {:#o}", reg, reg, reg))?),
                                (false, _,       true,  gp_reg) => MoveSource::Register(SourceRegister::GPReg(gp_reg as u8)),
                                (true,  _,       true,  _)      => Err(format!("Can't set Data Path/GP and Constant Mode bits at the same time"))?,
