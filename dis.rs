@@ -1,6 +1,6 @@
 // Copyright © 2023 David Caldwell <david@porkrind.org>
 
-use strum_macros::FromRepr;
+use strum_macros::{Display,FromRepr};
 
 use std::{error::Error, io::{Read, Write, BufReader}};
 
@@ -28,7 +28,7 @@ where for<'a> &'a R: Read,
 
         let insn = hw.decode(word).map_err(|e| format!("In instruction {:016b} @ {:#o}: {}", word, addr, e))?;
 
-        writeln!(&mut *output, "{:3o} {:016b} {:?}", addr, word, insn)?;
+        writeln!(&mut *output, "{:3o} {:016b} {}", addr, word, insn.disassemble(addr)?)?;
         addr += 1;
     }
     Ok(())
@@ -42,16 +42,70 @@ pub enum Instruction {
     Move{ source: MoveSource, dest: DestRegister },
 }
 
+impl Instruction {
+    pub fn disassemble(&self, addr: u16) -> Result<String, Box<dyn Error>> {
+        Ok(match self {
+            Instruction::Jump { when: true, condition: Condition::NoOperation, effective_address: 0 } => {
+                format!("NOP")
+            },
+            Instruction::Jump { when: false, condition: Condition::NoOperation, effective_address } => {
+                format!("{:<8} {:o}", "JUMP", effective_address)
+            },
+            Instruction::Jump { when: false, condition, effective_address } if *effective_address == addr => {
+                format!("{:<8} {}", "WAIT", condition)
+            },
+            Instruction::Jump { when, condition, effective_address } => {
+                format!("{:<8} {:o},{}", if *when { "JTC" } else { "JFC" }, effective_address, condition)
+            },
+            Instruction::FunctionALU { alu: None, function } => {
+                format!("{:<8} {}", "F", function)
+            },
+            Instruction::FunctionALU { alu: Some(mode), function: Function::NOP } => {
+                format!("{:<8} ,{}", "F", mode.mode)
+            },
+            Instruction::FunctionALU { alu: Some(mode), function } => {
+                format!("{:<8} {},{}", "F", function, mode.mode)
+            },
+            Instruction::FunctionTimer { timer, function } => {
+                let f = match function {
+                    Function::NOP => format!(""),
+                    f => format!("{}", f),
+                };
+                format!("{:<8} {},{:o}{}", "CF", f, 256u16 - timer.negative_count as u16, timer.clock_rate)
+            },
+            Instruction::Move { source, dest } => {
+                    let (src, src_comment) = match source {
+                        MoveSource::Literal(byte)                       => (format!("#{:o}", byte), None),
+                        MoveSource::Register(SourceRegister::GPReg(gp)) => (format!("GP{:o}", gp), None),
+                        MoveSource::Register(reg)                       => (format!("{}", reg), None),
+                        MoveSource::Constant(c)                         =>{ // Assemble a bit of the raw instruction back for the comment (to match old assembler)
+                                                                            let raw = 0b100_0000 | if *c < 16 {*c} else {*c & 0b1111 | 0b10_0000};
+                                                                            (format!("%{:o}", c), Some(format!("{:o} ({:b}) [bank {} #{}]", raw, raw, c >> 4, c & 0b1111))) },
+                    };
+                    let (dst, dst_comment) = match dest {
+                        DestRegister::GPReg(gp)                         => (format!("GP{:o}", gp), None),
+                        reg                                             => (format!("{}", reg), None),
+                    };
+                let dis = format!("{:<8} {},{}", "MV", src, dst);
+                match (&src_comment, &dst_comment) {
+                    (None, None) => dis,
+                    (_,    _)    => format!("{:<24}; {},{}", dis, src_comment.unwrap_or("".to_string()), dst_comment.unwrap_or("".to_string())),
+                }
+            },
+        })
+    }
+}
+
 #[derive(Debug,Clone)]
 pub struct Timer {
     pub negative_count: u8,
     pub clock_rate: ClockRate,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone, Display)]
 pub enum ClockRate {
-    Millisecond,
-    Microsecond,
+    #[strum(serialize = "MS")] Millisecond,
+    #[strum(serialize = "BT")] Microsecond, // BT???
 }
 
 #[derive(Debug,Clone)]
@@ -66,7 +120,7 @@ pub enum MoveSource {
     Constant(u8),
 }
 
-#[derive(FromRepr, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, FromRepr, Display)]
 #[repr(u8)]
 pub enum SourceRegister {
     #[strum(serialize = "DISKIN")]  RWFromDSU = 0,
@@ -78,7 +132,7 @@ pub enum SourceRegister {
     GPReg(u8),
 }
 
-#[derive(FromRepr, Debug, PartialEq, Clone)]
+#[derive(FromRepr, Debug, Display, PartialEq, Clone)]
 #[repr(u8)]
 pub enum DestRegister {
     #[strum(serialize = "DISKOUT")]  RWToDSU = 0,
@@ -100,7 +154,7 @@ const MOVE_SOURCE_REG:          u16 = 0b0000_0001_1110_0000;
 const MOVE_DEST_GP:             u16 = 0b0000_0000_0001_0000;
 const MOVE_DEST_REG:            u16 = 0b0000_0000_0000_1111;
 
-#[derive(FromRepr, Debug, PartialEq, Clone)]
+#[derive(FromRepr, Display, Debug, PartialEq, Clone)]
 #[repr(u8)]
 pub enum Condition {
     #[strum(serialize = "NOP0")]        NoOperation = 0,
@@ -146,7 +200,7 @@ pub enum Condition {
     #[strum(serialize = "INOP")]        FileInop,              // 0o16
 }
 
-#[derive(FromRepr, Debug, PartialEq, Clone)]
+#[derive(FromRepr, Debug, Display, PartialEq, Clone)]
 #[repr(u8)]
 pub enum ALUMode {
     // Name in code listing               74LS181 manual (but converted to modern PL operators:
@@ -206,7 +260,7 @@ pub enum ALUMode {
     /*_ = 0b00_1111,*/                   /* 0 0 1 1 1 1 -> F = A                      */
 }
 
-#[derive(FromRepr, Debug, PartialEq, Clone)]
+#[derive(FromRepr, Debug, Display, PartialEq, Clone)]
 #[repr(u8)]
 pub enum Function {
     HEADIN       = 0o00, // SET THE HEAD DIRECTION TO IN
