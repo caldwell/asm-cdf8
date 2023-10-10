@@ -213,11 +213,11 @@ impl OneBoard {
     fn decode_funct_alu_timer(&self, word: u16) -> Result<Instruction, Box<dyn Error>> {
         let func = ((word & 0b00_11111_0_0000_0000) >> 9) as u8;
         let function = Function::from_repr(func).ok_or_else(|| format!("Unknown function {} {:#07b} {:#2o}", func, func, func))?;
-        Ok(match (word & TIMER_ALU_SELECT, word & ALU_FUNCT_SELECT) {
-            (TIMER_ALU_SELECT_TIMER, 0)                    => Instruction::FunctionTimer { function, timer: self.decode_timer(word)? },
-            (0                     , ALU_FUNCT_SELECT_ALU) => Instruction::FunctionALU   { function, alu: Some(self.decode_alu(word)?) },
-            (0                     , 0)                    => Instruction::FunctionALU   { function, alu: None },
-            _ => Err(format!("ALU and Timer bits both set in function instruction"))?,
+        Ok(match ((word & TIMER_ALU_SELECT) == TIMER_ALU_SELECT_TIMER,
+                  (word & ALU_FUNCT_SELECT) == ALU_FUNCT_SELECT_ALU) {
+            (true,  _    ) => Instruction::FunctionTimer { function, timer: self.decode_timer(word)? },
+            (false, true ) => Instruction::FunctionALU   { function, alu: Some(self.decode_alu(word)?) },
+            (false, false) => Instruction::FunctionALU   { function, alu: None },
         })
     }
 
