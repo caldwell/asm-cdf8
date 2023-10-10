@@ -8,6 +8,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::result::Result;
 
+mod cdf8;
 mod dis;
 mod asm;
 
