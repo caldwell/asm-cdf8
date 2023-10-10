@@ -110,11 +110,13 @@ impl TwoBoard {
         Ok(Instruction::Jump {
             when: (word & 0b0010_0000_0000_0000) == 0,
             condition: match condition {
+                // Special cases where TwoBoard is different from OneBoard
                 0o2  => Condition::MemoryReady,
                 0o12 => Condition::SectorHeaderMark,
                 0o13 => Condition::DataId,
                 0o14 => Condition::DelData,
                 0o16 => Condition::FileInop,
+                // These are the same as OneBoard
                 _    => Condition::from_repr(condition as u8).ok_or_else(|| format!("Unknown condition {} {:#07b} {:#02o}", condition, condition, condition))?
             },
             effective_address: (word & 0b0000_0000_1111_1111)
@@ -141,7 +143,7 @@ impl TwoBoard {
         Ok(match (word & 0b0000_0000_0010_0000) != 0 {
             false => Instruction::FunctionALU   { function, alu: None },
             true  => Instruction::FunctionALU   { function, alu: Some(ALU {
-                mode: match word & 0xF {
+                mode: match word & 0xF { // This is all different from OneBoard, so just do it here.
                     0o0  => ALUMode::PLUS,
                     0o1  => ALUMode::MINUS,
                     0o2  => ALUMode::DEC,
@@ -165,7 +167,7 @@ impl TwoBoard {
     }
 
     fn decode_move(&self, word: u16) -> Result<Instruction, Box<dyn Error>> {
-        Ok(Instruction::Move{
+        Ok(Instruction::Move{ // This is also fairly different
             source: match ((word & 0b0010_0000_0000_0000)!=0, // Constant Mode
                            (word & 0b0001_0000_0000_0000)!=0, // Group 2 Constants
                            (word & 0b0000_1000_0000_0000)!=0, // Data Path/GP
