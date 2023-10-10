@@ -297,7 +297,7 @@ impl TwoBoard {
 
     fn decode_funct_alu(&self, word: u16) -> Result<Instruction, Box<dyn Error>> {
         let function = self.decode_function(word)?;
-        Ok(match (word & 0b0000_0000_0010_0000) != 1 {
+        Ok(match (word & 0b0000_0000_0010_0000) != 0 {
             false => Instruction::FunctionALU   { function, alu: None },
             true  => Instruction::FunctionALU   { function, alu: Some(ALU {
                 mode: match word & 0xF {
