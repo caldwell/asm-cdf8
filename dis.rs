@@ -103,38 +103,47 @@ const MOVE_DEST_REG:            u16 = 0b0000_0000_0000_1111;
 #[derive(FromRepr, Debug, PartialEq, Clone)]
 #[repr(u8)]
 pub enum Condition {
-    NoOperation = 0,
-    ByteRdyRqst,
-    //Unassigned1,
-    FillBfrCmd = 3,
-    EmptyBfrCmd,
-    Ready,
-    IndexHole,
-    HeadTimedOut,
-    CRCError,
-    Drive1Sel,
-    IDClockPattern,
-    #[strum(serialize = "DATAID")]  DataId,  // Two Board only?
-    #[strum(serialize = "DELDATA")] DelData, // Two Board only?
-    TimerDone = 0o15,
-    #[strum(serialize = "NOP")]     Nop,// 0o16
-    SelHeadDown = 0o17,
-    D5Load,
-    ACK,
-    Terminate,
-    ReadDataCmd,
-    WriteDataCmd,
-    SeekCmd,
-    FrmtDiskCmd,
-    Drive2Sel,
-    Drive3Sel,
-    CmdRdy,
-    WriteProtect,
-    WriteDataCmd2,
-    Track00,
-    ALUCarry,
-    ALUEqual,
-    Drive4Sel,
+    #[strum(serialize = "NOP0")]        NoOperation = 0,
+    #[strum(serialize = "RDYREQ")]      ByteRdyRqst,
+
+    #[strum(serialize = "FILL")]        FillBfrCmd = 3,
+    #[strum(serialize = "EMPTY")]       EmptyBfrCmd,
+    #[strum(serialize = "NOTREADY")]    Ready,
+    #[strum(serialize = "HOLE")]        IndexHole,
+    #[strum(serialize = "CLKDOWN")]     HeadTimedOut,          // "Timed Head Down (20MS)" in listing comments
+    #[strum(serialize = "CRCERR")]      CRCError,
+    #[strum(serialize = "D0SELF")]      Drive1Sel,
+    #[strum(serialize = "")]            IDClockPattern,
+
+
+    #[strum(serialize = "TIMER")]       TimerDone = 0o15,
+
+    #[strum(serialize = "DOWN")]        SelHeadDown = 0o17,
+    #[strum(serialize = "D5LOAD")]      D5Load,
+    #[strum(serialize = "ACK")]         ACK,
+    #[strum(serialize = "TERMINATE")]   Terminate,
+    #[strum(serialize = "READ")]        ReadDataCmd,
+    #[strum(serialize = "WRITE")]       WriteDataCmd,
+    #[strum(serialize = "SEEK")]        SeekCmd,
+    #[strum(serialize = "FORMAT")]      FrmtDiskCmd = 0o26,    // IF DF INHOUSE
+    //#[strum(serialize = "READAFTW")]  ReadAfterWrite = 0o26, // Not inhouse??
+    #[strum(serialize = "D1SELF")]      Drive2Sel,
+    #[strum(serialize = "D2SELF")]      Drive3Sel,
+    #[strum(serialize = "COMAND")]      CmdRdy,
+    #[strum(serialize = "WRITEPROT")]   WriteProtect,
+    #[strum(serialize = "WRITEDEL")]    WriteDataCmd2,
+    #[strum(serialize = "TRACK00")]     Track00,
+    #[strum(serialize = "C",
+            serialize = "CS")]          ALUCarry,
+    #[strum(serialize = "EQ")]          ALUEqual,
+    #[strum(serialize = "DSSELF")]      Drive4Sel,
+
+    //                                  Two Board
+    #[strum(serialize = "MEMRDY")]      MemoryReady,           // 0o2
+    #[strum(serialize = "SECTOR")]      SectorHeaderMark,      // 0o12
+    #[strum(serialize = "DATAID")]      DataId,                // 0o13
+    #[strum(serialize = "DELDATA")]     DelData,               // 0o14
+    #[strum(serialize = "INOP")]        FileInop,              // 0o16
 }
 
 #[derive(FromRepr, Debug, PartialEq, Clone)]
@@ -259,7 +268,14 @@ impl TwoBoard {
         let condition = (word & 0b0001_1111_0000_0000) >> 8;
         Ok(Instruction::Jump {
             when: (word & 0b0010_0000_0000_0000) == 0,
-            condition: Condition::from_repr(condition as u8).ok_or_else(|| format!("Unknown condition {} {:#07b} {:#02o}", condition, condition, condition))?,
+            condition: match condition {
+                0o2  => Condition::MemoryReady,
+                0o12 => Condition::SectorHeaderMark,
+                0o13 => Condition::DataId,
+                0o14 => Condition::DelData,
+                0o16 => Condition::FileInop,
+                _    => Condition::from_repr(condition as u8).ok_or_else(|| format!("Unknown condition {} {:#07b} {:#02o}", condition, condition, condition))?
+            },
             effective_address: (word & 0b0000_0000_1111_1111)
         })
     }
