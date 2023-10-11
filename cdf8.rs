@@ -237,11 +237,54 @@ pub enum Function {
     ALSTATUS     = 0o36, // SEND STATS ON COMMAND COMPLETION
 }
 
-// This was a thing in the two board version (replaced by real immediates in the one board mv instruction
+// This was a thing in the two board version (replaced by real immediates in the one board mv instruction)
 pub const CONSTANT_ROM: [u8;32] = [
-    0xff,  /* 0o0  */ 0xdf,  /* 0o1  */ 0xfc,  /* 0o2  */ 0xc7,  /* 0o3  */ 0xfe,  /* 0o4  */ 0xfb,  /* 0o5  */ 0x20,  /* 0o6  */ 0x11,  /* 0o7  */
+    0xff,  /* 0o0  */ 0xd7,  /* 0o1  */ 0xfc,  /* 0o2  */ 0xc7,  /* 0o3  */ 0xfe,  /* 0o4  */ 0xfb,  /* 0o5  */ 0x20,  /* 0o6  */ 0x11,  /* 0o7  */
     0x2e,  /* 0o10 */ 0x80,  /* 0o11 */ 0x4c,  /* 0o12 */ 0xfd,  /* 0o13 */ 0x1e,  /* 0o14 */ 0x00,  /* 0o15 */ 0x21,  /* 0o16 */ 0xf8,  /* 0o17 */
     0xe5,  /* 0o20 */ 0xf5,  /* 0o21 */ 0xfa,  /* 0o22 */ 0x01,  /* 0o23 */ 0x99,  /* 0o24 */ 0x02,  /* 0o25 */ 0x03,  /* 0o26 */ 0x04,  /* 0o27 */
-    0x1a,  /* 0o30 */ 0x7c,  /* 0o31 */ 0x4f,  /* 0o32 */ 0x2b,  /* 0o33 */ 0xfc,  /* 0o34 */ 0x1b,  /* 0o35 */ 0x1c,  /* 0o36 */ 0 // unused 0o37
+    0x1a,  /* 0o30 */ 0x7c,  /* 0o31 */ 0x4f,  /* 0o32 */ 0x2b,  /* 0o33 */ 0xfc,  /* 0o34 */ 0x1b,  /* 0o35 */ 0x1c,  /* 0o36 */ 0xff // unused 0o37
 ];
 
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn constant_rom() {
+        // An alternate dump of the constant rom to double check my "transcribed from faded dot-matrix listing printout" array.
+        let dump: [u8; 32] = [
+            0b11111111,
+            0b11010111,
+            0b11111100,
+            0b11000111,
+            0b11111110,
+            0b11111011,
+            0b00100000,
+            0b00010001,
+            0b00101110,
+            0b10000000,
+            0b01001100,
+            0b11111101,
+            0b00011110,
+            0b00000000,
+            0b00100001,
+            0b11111000,
+            0b11100101,
+            0b11110101,
+            0b11111010,
+            0b00000001,
+            0b10011001,
+            0b00000010,
+            0b00000011,
+            0b00000100,
+            0b00011010,
+            0b01111100,
+            0b01001111,
+            0b00101011,
+            0b11111100,
+            0b00011011,
+            0b00011100,
+            0b11111111,
+        ];
+        assert_eq!(CONSTANT_ROM, dump);
+    }
+}
