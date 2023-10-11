@@ -24,10 +24,25 @@ pub enum RawOpcodeTwoBoard {
 
 #[derive(Debug,Clone)]
 pub enum Instruction {
-    Jump{ when: bool, condition: Condition, effective_address: u16 },
+    Jump{ when: bool, condition: Condition, effective_address: JumpDest },
     FunctionTimer { timer: Timer, function: Function },
     FunctionALU { alu: Option<ALU>, function: Function },
     Move{ source: MoveSource, dest: DestRegister },
+}
+
+#[derive(Debug,Clone)]
+pub enum JumpDest {
+    Absolute(u16),
+    Symbol(String),
+}
+
+impl std::fmt::Display for JumpDest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(match self {
+            JumpDest::Absolute(a) => write!(f, "{:o}", a)?,
+            JumpDest::Symbol(s) => write!(f, "{}", s.clone())?,
+        })
+    }
 }
 
 pub const TIMER_ALU_SELECT:       u16 = 0b0000_0001_0000_0000;

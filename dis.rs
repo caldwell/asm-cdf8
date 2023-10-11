@@ -1,6 +1,6 @@
 // Copyright © 2023 David Caldwell <david@porkrind.org>
 
-use std::{error::Error, io::{Read, Write, BufReader}};
+use std::{error::Error, io::{Read, Write, BufReader}, collections::HashMap};
 
 use crate::cdf8::*;
 
@@ -11,7 +11,8 @@ where for<'a> &'a R: Read,
 {
     let reader = BufReader::new(input);
     let mut byte = reader.bytes();
-    let mut addr = 0;
+    let mut program: Vec<Instruction> = Vec::new();
+    let mut raw: Vec<u16> = Vec::new();
     loop {
         let word = match (byte.next(), byte.next()) {
             (Some(Ok(high)),  Some(Ok(low))) => (high as u16) << 8 | low as u16,
@@ -21,28 +22,78 @@ where for<'a> &'a R: Read,
             (None,            _            ) => break/* normal end*/,
         };
 
-        let insn = hw.decode(word).map_err(|e| format!("In instruction {:016b} @ {:#o}: {}", word, addr, e))?;
-
-        writeln!(&mut *output, "{:3o} {:016b} {}", addr, word, insn.disassemble(addr)?)?;
-        addr += 1;
+        let insn = hw.decode(word).map_err(|e| format!("In instruction {:016b} @ {:#o}: {}", word, program.len(), e))?;
+        program.push(insn);
+        raw.push(word);
+    }
+    let mut symbols = SymbolTable::new();
+    if hw.variant() == ProcessorVariant::OneBoard {
+        // The TwoBoard hardware has 2 banks of ROMs (which they call "fields"). The jump labelling isn't
+        // compatible with the fields (needs detection of the "F CDF[01]" instructions). I'm not going to
+        // implement that since we already have an actual printout of the TwoBoard microcode source (with
+        // comments!), and since we don't actually have any TwoBoard hardware anyway.
+        label_jumps(&mut program, &mut symbols);
+    }
+    for (addr, insn) in program.iter().enumerate() {
+        writeln!(&mut *output, "{label:<10} {:3o} {:016b} {}", addr, raw[addr], insn.disassemble(addr as u16)?,
+                 label=match symbols.symbol_for_addr(addr as u16) { Some(name) =>  format!("{}:", name), _ => format!("") })?;
     }
     Ok(())
 }
 
+struct SymbolTable {
+    symbols: HashMap<String, u16>,
+}
+
+impl SymbolTable {
+    fn new() -> SymbolTable {
+        SymbolTable { symbols: HashMap::new() }
+    }
+    fn symbol_for_addr(&self, addr: u16) -> Option<String> {
+        // We could index or cache this but who cares, the rom only holds like 500 instructions
+        if let Some((name, _)) = self.symbols.iter().find(|(_, a)| **a == addr) {
+            Some(name.clone())
+        } else {
+            None
+        }
+    }
+    fn addr_for_symbol(&self, name: &str) -> Option<u16> {
+        self.symbols.get(name).copied()
+    }
+    fn insert(&mut self, name: String, addr: u16) {
+        self.symbols.insert(name, addr);
+    }
+}
+
+fn label_jumps(program: &mut Vec<Instruction>, symbols: &mut SymbolTable) {
+    for (addr, insn) in program.iter_mut().enumerate() {
+        match insn {
+            Instruction::Jump{ when, condition, effective_address: JumpDest::Absolute(a) } if *a != addr as u16 => {
+                if symbols.symbol_for_addr(*a).is_none() {
+                    symbols.insert(format!("addr{:o}", a), *a);
+                }
+                *insn = Instruction::Jump{ when: *when, condition: *condition, effective_address: JumpDest::Symbol(symbols.symbol_for_addr(*a).unwrap().clone()) };
+            },
+            _ => {},
+        }
+    }
+}
+
+
 impl Instruction {
     pub fn disassemble(&self, addr: u16) -> Result<String, Box<dyn Error>> {
         Ok(match self {
-            Instruction::Jump { when: true, condition: Condition::NoOperation, effective_address: 0 } => {
+            Instruction::Jump { when: true, condition: Condition::NoOperation, effective_address: JumpDest::Absolute(0) } => {
                 format!("NOP")
             },
             Instruction::Jump { when: false, condition: Condition::NoOperation, effective_address } => {
-                format!("{:<8} {:o}", "JUMP", effective_address)
+                format!("{:<8} {}", "JUMP", effective_address)
             },
-            Instruction::Jump { when: false, condition, effective_address } if *effective_address == addr => {
+            Instruction::Jump { when: false, condition, effective_address: JumpDest::Absolute(effective_address) } if *effective_address == addr => {
                 format!("{:<8} {}", "WAIT", condition)
             },
             Instruction::Jump { when, condition, effective_address } => {
-                format!("{:<8} {:o},{}", if *when { "JTC" } else { "JFC" }, effective_address, condition)
+                format!("{:<8} {},{}", if *when { "JTC" } else { "JFC" }, effective_address, condition)
             },
             Instruction::FunctionALU { alu: None, function } => {
                 format!("{:<8} {}", "F", function)
@@ -84,8 +135,14 @@ impl Instruction {
     }
 }
 
+#[derive(PartialEq)]
+pub enum ProcessorVariant {
+    TwoBoard, // Old
+    OneBoard, // New
+}
 
 pub trait DecodeInstruction {
+    fn variant(&self) -> ProcessorVariant;
     fn decode(&self, word: u16) -> Result<Instruction, Box<dyn Error>>;
 }
 
@@ -93,6 +150,7 @@ pub struct TwoBoard {
 }
 
 impl DecodeInstruction for TwoBoard {
+    fn variant(&self) -> ProcessorVariant { ProcessorVariant::TwoBoard }
     fn decode(&self, word: u16) -> Result<Instruction, Box<dyn Error>> {
         Ok(match RawOpcodeTwoBoard::from_repr(word & OPCODE_MASK).unwrap() {
             RawOpcodeTwoBoard::Jump          => self.decode_jump(word)?,
@@ -120,7 +178,7 @@ impl TwoBoard {
                 // These are the same as OneBoard
                 _    => Condition::from_repr(condition as u8).ok_or_else(|| format!("Unknown condition {} {:#07b} {:#02o}", condition, condition, condition))?
             },
-            effective_address: (word & 0b0000_0000_1111_1111)
+            effective_address: JumpDest::Absolute(word & 0b0000_0000_1111_1111)
         })
     }
 
@@ -190,6 +248,7 @@ pub struct OneBoard {
 }
 
 impl DecodeInstruction for OneBoard {
+    fn variant(&self) -> ProcessorVariant { ProcessorVariant::OneBoard }
     fn decode(&self, word: u16) -> Result<Instruction, Box<dyn Error>> {
         Ok(match RawOpcodeOneBoard::from_repr(word & OPCODE_MASK).unwrap() {
             RawOpcodeOneBoard::JumpTrue         => self.decode_jump(true, word)?,
@@ -207,7 +266,7 @@ impl OneBoard {
         Ok(Instruction::Jump {
             when,
             condition: Condition::from_repr(condition as u8).ok_or_else(|| format!("Unknown condition {} {:#07b} {:#02o}", condition, condition, condition))?,
-            effective_address: (word & 0b00_00000_1_1111_1111)
+            effective_address: JumpDest::Absolute(word & 0b00_00000_1_1111_1111)
         })
     }
 
