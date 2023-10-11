@@ -237,4 +237,11 @@ pub enum Function {
     ALSTATUS     = 0o36, // SEND STATS ON COMMAND COMPLETION
 }
 
+// This was a thing in the two board version (replaced by real immediates in the one board mv instruction
+pub const CONSTANT_ROM: [u8;32] = [
+    0xff,  /* 0o0  */ 0xdf,  /* 0o1  */ 0xfc,  /* 0o2  */ 0xc7,  /* 0o3  */ 0xfe,  /* 0o4  */ 0xfb,  /* 0o5  */ 0x20,  /* 0o6  */ 0x11,  /* 0o7  */
+    0x2e,  /* 0o10 */ 0x80,  /* 0o11 */ 0x4c,  /* 0o12 */ 0xfd,  /* 0o13 */ 0x1e,  /* 0o14 */ 0x00,  /* 0o15 */ 0x21,  /* 0o16 */ 0xf8,  /* 0o17 */
+    0xe5,  /* 0o20 */ 0xf5,  /* 0o21 */ 0xfa,  /* 0o22 */ 0x01,  /* 0o23 */ 0x99,  /* 0o24 */ 0x02,  /* 0o25 */ 0x03,  /* 0o26 */ 0x04,  /* 0o27 */
+    0x1a,  /* 0o30 */ 0x7c,  /* 0o31 */ 0x4f,  /* 0o32 */ 0x2b,  /* 0o33 */ 0xfc,  /* 0o34 */ 0x1b,  /* 0o35 */ 0x1c,  /* 0o36 */ 0 // unused 0o37
+];
 
