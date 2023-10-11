@@ -50,8 +50,22 @@ fn main() -> Result<(), Box<dyn Error>> {
             dis::disassemble(&dis::OneBoard::new(), &File::open(args.arg_image)?, &mut std::io::stdout())?;
         };
     } else {
-        asm::assemble(&File::open(args.arg_source_file)?, &mut File::create(args.arg_image)?)?;
+        asm::assemble(&File::open(&args.arg_source_file).with_context(format!("source file '{}'", args.arg_source_file.to_string_lossy()))?,
+                      &mut File::create(&args.arg_image).with_context(format!("output image '{}'", args.args_image.to_string_lossy()))?)?;
     }
 
     Ok(())
+}
+
+trait WithContext<T> {
+    fn with_context(self, context: String)->Result<T, String>;
+}
+
+impl<T, E> WithContext<T> for Result<T, E> where E: Error {
+    fn with_context(self, context: String)->Result<T, String> {
+        match self {
+            Ok(v) => Ok(v),
+            Err(e) => Err(format!("{}: {}", context, e))
+        }
+    }
 }
