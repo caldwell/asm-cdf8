@@ -9,7 +9,7 @@ pub const OPCODE_MASK: u16 = 0b1100_0000_0000_0000;
 pub enum RawOpcodeOneBoard {
     JumpTrue         = 0b0000_0000_0000_0000,
     JumpFalse        = 0b0100_0000_0000_0000,
-    FunctionAluTimer = 0b1000_0000_0000_0000,
+    FunctionALUTimer = 0b1000_0000_0000_0000,
     Move             = 0b1100_0000_0000_0000,
 }
 
@@ -18,7 +18,7 @@ pub enum RawOpcodeOneBoard {
 pub enum RawOpcodeTwoBoard {
     Jump          = 0b0000_0000_0000_0000,
     FunctionTimer = 0b0100_0000_0000_0000,
-    FunctionAlu   = 0b1000_0000_0000_0000,
+    FunctionALU   = 0b1000_0000_0000_0000,
     Move          = 0b1100_0000_0000_0000,
 }
 

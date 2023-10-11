@@ -97,7 +97,7 @@ impl DecodeInstruction for TwoBoard {
         Ok(match RawOpcodeTwoBoard::from_repr(word & OPCODE_MASK).unwrap() {
             RawOpcodeTwoBoard::Jump          => self.decode_jump(word)?,
             RawOpcodeTwoBoard::FunctionTimer => self.decode_funct_timer(word)?,
-            RawOpcodeTwoBoard::FunctionAlu   => self.decode_funct_alu(word)?,
+            RawOpcodeTwoBoard::FunctionALU   => self.decode_funct_alu(word)?,
             RawOpcodeTwoBoard::Move          => self.decode_move(word)?,
         })
     }
@@ -194,7 +194,7 @@ impl DecodeInstruction for OneBoard {
         Ok(match RawOpcodeOneBoard::from_repr(word & OPCODE_MASK).unwrap() {
             RawOpcodeOneBoard::JumpTrue         => self.decode_jump(true, word)?,
             RawOpcodeOneBoard::JumpFalse        => self.decode_jump(false, word)?,
-            RawOpcodeOneBoard::FunctionAluTimer => self.decode_funct_alu_timer(word)?,
+            RawOpcodeOneBoard::FunctionALUTimer => self.decode_funct_alu_timer(word)?,
             RawOpcodeOneBoard::Move             => self.decode_move(word)?,
         })
     }
