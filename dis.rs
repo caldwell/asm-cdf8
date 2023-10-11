@@ -144,7 +144,7 @@ impl TwoBoard {
         Ok(match (word & 0b0000_0000_0010_0000) != 0 {
             false => Instruction::FunctionALU   { function, alu: None },
             true  => Instruction::FunctionALU   { function, alu: Some(ALU {
-                mode: match word & 0xF { // This is all different from OneBoard, so just do it here.
+                mode: match word & 0xF { // On the TwoBoard version these 4 bits go through a PROM that outputs the 6 bits to the ALU (C+M+S4-0)
                     0o0  => ALUMode::PLUS,
                     0o1  => ALUMode::MINUS,
                     0o2  => ALUMode::DEC,
@@ -243,5 +243,58 @@ impl OneBoard {
                 (true,  gp_reg) => DestRegister::GPReg(gp_reg as u8),
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn two_board_alu_rom() {
+        let two_board = TwoBoard::new();
+        let alu_rom: [u8; 16] = [
+            // Actual ALU ROM dump. Top 2 bits were unused. This translates the 4 bits of the instruction into
+            // 6 bits of ALU inputs. The top 2 bits are unused and remained as unprogrammed 1s in the PROM.
+            // Specifically, the output mappings are:
+            //XXCM_0123     C=Carry(Bar), M=M (logic mode), 0-4=S0-S4.
+            0b1110_1001,
+            0b1100_0110,
+            0b1110_1111,
+            0b1100_0000,
+            0b1110_0011, //0b1110_1100 in the dump printout, but there's a handwritten "wrong" next to it :-)
+            0b1111_0000,
+            0b1111_1010,
+            0b1111_1000,
+            0b1111_0010,
+            0b1111_0110,
+            0b1111_1001,
+            0b1111_1101,
+            0b1111_0111,
+            0b1111_1111,
+            0b1111_0101,
+            0b1110_0110,
+        ];
+
+        let reverse: [u8; 16] = [ // look up table for bit-reversing a nibble
+            0b0000, 0b1000, 0b0100, 0b1100, 0b0010, 0b1010, 0b0110, 0b1110,
+            0b0001, 0b1001, 0b0101, 0b1101, 0b0011, 0b1011, 0b0111, 0b1111,
+        ];
+
+        for (i, rom_entry) in alu_rom.into_iter().enumerate() {
+            let rom_entry = rom_entry & 0b0011_1111; // Top two bits aren't used
+
+            // Output of ALU ROM has S3 as the LSB, then S2, S1, S0. This is reversed from the one-board
+            // revision where the bits come right out of the instruction. The main code is from the one-board
+            // perspective so to validate we have to bit reverse the lower nibble of the ROM.
+            let rom_entry = rom_entry & 0b0011_0000 | reverse[(rom_entry & 0b0000_1111) as usize];
+            let word = RawOpcodeTwoBoard::FunctionALU as u16 | 0b10_0000 | i as u16;
+            let Instruction::FunctionALU { function:_, alu: Some(ALU { mode }) } = two_board.decode_funct_alu(word).expect("decode failed")
+                else { panic!("Instruction encode failed for {:160b}", word) };
+            if mode as u8 != rom_entry {
+                panic!("alu_rom[{i}] != decode({insn:016b})\nalu_rom: {rom:08b}\ndecode : {modeu8:08b} {mode}", i=i, rom=rom_entry, insn=word, modeu8=mode as u8, mode=mode);
+            }
+            assert_eq!(mode as u8, rom_entry);
+        };
     }
 }
