@@ -68,7 +68,7 @@ pub enum MoveSource {
     Constant(u8),
 }
 
-#[derive(Debug, PartialEq, Clone, FromRepr, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
 #[repr(u8)]
 pub enum SourceRegister {
     #[strum(serialize = "DISKIN")]  RWFromDSU = 0,
@@ -80,7 +80,7 @@ pub enum SourceRegister {
     GPReg(u8),
 }
 
-#[derive(FromRepr, Debug, Display, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
 #[repr(u8)]
 pub enum DestRegister {
     #[strum(serialize = "DISKOUT")]  RWToDSU = 0,
@@ -95,7 +95,7 @@ pub enum DestRegister {
     GPReg(u8),
 }
 
-#[derive(FromRepr, Display, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
 #[repr(u8)]
 pub enum Condition {
     #[strum(serialize = "NOP0")]        NoOperation = 0,
@@ -141,7 +141,7 @@ pub enum Condition {
     #[strum(serialize = "INOP")]        FileInop,              // 0o16
 }
 
-#[derive(FromRepr, Debug, Display, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
 #[repr(u8)]
 pub enum ALUMode {
     // Name in code listing               74LS181 manual (but converted to modern PL operators:
@@ -201,7 +201,7 @@ pub enum ALUMode {
     /*_ = 0b00_1111,*/                   /* 0 0 1 1 1 1 -> F = A                      */
 }
 
-#[derive(FromRepr, Debug, Display, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
 #[repr(u8)]
 pub enum Function {
     HEADIN       = 0o00, // SET THE HEAD DIRECTION TO IN
