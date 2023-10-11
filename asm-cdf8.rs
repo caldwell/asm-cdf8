@@ -22,7 +22,7 @@ Options:
   -h --help              Show this screen.
   -v --verbose           Be more verbose.
   -d --disassemble       Disassemble microcode image
-  -o --output=<image>    Ouput image to <image> (default: a.out)
+  -o --output=<image>    Ouput image to <image> [default: a.out]
   --twoboard             Use the older \"two board\" revision instruction set
 ";
 
@@ -31,6 +31,7 @@ struct Args {
     flag_verbose:     usize,
     flag_disassemble: bool,
     flag_twoboard:    bool,
+    flag_output:      PathBuf,
     arg_source_file:  PathBuf,
     arg_image:        PathBuf,
 }
@@ -51,7 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
     } else {
         asm::assemble(&File::open(&args.arg_source_file).with_context(format!("source file '{}'", args.arg_source_file.to_string_lossy()))?,
-                      &mut File::create(&args.arg_image).with_context(format!("output image '{}'", args.args_image.to_string_lossy()))?)?;
+                      &mut File::create(&args.flag_output).with_context(format!("output image '{}'", args.flag_output.to_string_lossy()))?)?;
     }
 
     Ok(())
