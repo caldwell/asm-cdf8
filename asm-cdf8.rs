@@ -62,7 +62,7 @@ trait WithContext<T> {
     fn with_context(self, context: String)->Result<T, String>;
 }
 
-impl<T, E> WithContext<T> for Result<T, E> where E: Error {
+impl<T, E> WithContext<T> for Result<T, E> where E: std::fmt::Display {
     fn with_context(self, context: String)->Result<T, String> {
         match self {
             Ok(v) => Ok(v),
