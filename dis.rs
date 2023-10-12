@@ -99,10 +99,10 @@ impl Instruction {
                 format!("{:<8} {}", "F", function)
             },
             Instruction::FunctionALU { alu: Some(mode), function: Function::NOP } => {
-                format!("{:<8} ,{}", "F", mode.mode)
+                format!("{:<8} ,{}", "F", mode)
             },
             Instruction::FunctionALU { alu: Some(mode), function } => {
-                format!("{:<8} {},{}", "F", function, mode.mode)
+                format!("{:<8} {},{}", "F", function, mode)
             },
             Instruction::FunctionTimer { timer, function } => {
                 let f = match function {
@@ -201,8 +201,8 @@ impl TwoBoard {
         let function = self.decode_function(word)?;
         Ok(match (word & 0b0000_0000_0010_0000) != 0 {
             false => Instruction::FunctionALU   { function, alu: None },
-            true  => Instruction::FunctionALU   { function, alu: Some(ALU {
-                mode: match word & 0xF { // On the TwoBoard version these 4 bits go through a PROM that outputs the 6 bits to the ALU (C+M+S4-0)
+            true  => Instruction::FunctionALU   { function, alu: Some(
+                match word & 0xF { // On the TwoBoard version these 4 bits go through a PROM that outputs the 6 bits to the ALU (C+M+S4-0)
                     0o0  => ALUMode::PLUS,
                     0o1  => ALUMode::MINUS,
                     0o2  => ALUMode::DEC,
@@ -220,7 +220,7 @@ impl TwoBoard {
                     0o16 => ALUMode::CPYB,
                     0o17 => ALUMode::CMP,
                     _ => unreachable!(),
-                }})
+                })
             },
         })
     }
@@ -285,9 +285,9 @@ impl OneBoard {
         Ok(Timer { negative_count: (word & 0xff) as u8, clock_rate: ClockRate::Millisecond })
     }
 
-    fn decode_alu(&self, word: u16) -> Result<ALU, Box<dyn Error>> {
+    fn decode_alu(&self, word: u16) -> Result<ALUMode, Box<dyn Error>> {
         let nc_m_s3210 = (word & 0b11_1111) as u8;
-        Ok(ALU { mode: ALUMode::from_repr(nc_m_s3210).ok_or_else(|| format!("Unknown ALU bits: !C={} M={}, S[3..0]={}", nc_m_s3210 >> 5, (nc_m_s3210 >> 4) & 1, nc_m_s3210 & 0b1111))? })
+        Ok(ALUMode::from_repr(nc_m_s3210).ok_or_else(|| format!("Unknown ALU bits: !C={} M={}, S[3..0]={}", nc_m_s3210 >> 5, (nc_m_s3210 >> 4) & 1, nc_m_s3210 & 0b1111))?)
     }
 
     fn decode_move(&self, word: u16) -> Result<Instruction, Box<dyn Error>> {
@@ -348,7 +348,7 @@ mod test {
             // perspective so to validate we have to bit reverse the lower nibble of the ROM.
             let rom_entry = rom_entry & 0b0011_0000 | reverse[(rom_entry & 0b0000_1111) as usize];
             let word = RawOpcodeTwoBoard::FunctionALU as u16 | 0b10_0000 | i as u16;
-            let Instruction::FunctionALU { function:_, alu: Some(ALU { mode }) } = two_board.decode_funct_alu(word).expect("decode failed")
+            let Instruction::FunctionALU { function:_, alu: Some(mode) } = two_board.decode_funct_alu(word).expect("decode failed")
                 else { panic!("Instruction encode failed for {:160b}", word) };
             if mode as u8 != rom_entry {
                 panic!("alu_rom[{i}] != decode({insn:016b})\nalu_rom: {rom:08b}\ndecode : {modeu8:08b} {mode}", i=i, rom=rom_entry, insn=word, modeu8=mode as u8, mode=mode);

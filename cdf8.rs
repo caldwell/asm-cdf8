@@ -26,7 +26,7 @@ pub enum RawOpcodeTwoBoard {
 pub enum Instruction {
     Jump{ when: bool, condition: Condition, effective_address: JumpDest },
     FunctionTimer { timer: Timer, function: Function },
-    FunctionALU { alu: Option<ALU>, function: Function },
+    FunctionALU { alu: Option<ALUMode>, function: Function },
     Move{ source: MoveSource, dest: DestRegister },
 }
 
@@ -69,11 +69,6 @@ pub struct Timer {
 pub enum ClockRate {
     #[strum(serialize = "MS")] Millisecond,
     #[strum(serialize = "BT")] Microsecond, // BT???
-}
-
-#[derive(Debug,Clone)]
-pub struct ALU {
-    pub mode: ALUMode,
 }
 
 #[derive(Debug,Clone)]
