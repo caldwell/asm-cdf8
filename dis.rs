@@ -114,7 +114,7 @@ impl Instruction {
             Instruction::Move { source, dest } => {
                     let (src, src_comment) = match source {
                         MoveSource::Literal(byte)                       => (format!("#{:o}", byte), None),
-                        MoveSource::Register(SourceRegister::GPReg(gp)) => (format!("GP{:o}", gp), None),
+                        MoveSource::Register(SourceRegister::GPReg(gp)) => (format!("GP{}", gp), None),
                         MoveSource::Register(reg)                       => (format!("{}", reg), None),
                         MoveSource::Constant(c)                         =>{ // Assemble a bit of the raw instruction back for the comment (to match old assembler)
                                                                             let raw = 0b100_0000 | if *c < 16 {*c} else {*c & 0b1111 | 0b10_0000};
@@ -122,7 +122,7 @@ impl Instruction {
                                                                             (format!("#{:o}", val), Some(format!("constant[{:o}] (bank {} #{}) raw={:o} ({:b})", c, c >> 4, c & 0b1111, raw, raw))) },
                     };
                     let (dst, dst_comment) = match dest {
-                        DestRegister::GPReg(gp)                         => (format!("GP{:o}", gp), None),
+                        DestRegister::GPReg(gp)                         => (format!("GP{}", gp), None),
                         reg                                             => (format!("{}", reg), None),
                     };
                 let dis = format!("{:<8} {},{}", "MV", src, dst);
