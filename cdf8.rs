@@ -103,7 +103,7 @@ pub enum DestRegister {
     #[strum(serialize = "ODRVSEL")]  DriveSelReg = 5,
     #[strum(serialize = "MAR")]      MAR = 6, // Memory Address Register
     #[strum(serialize = "MEMORY")]   Memory = 7,
-    /*#[strum(serialize = "")] */    HeadLoadRegister = 8,
+    #[strum(serialize = "HEADLOAD")] HeadLoadRegister = 8, // I made up the serialized name because it didn't exist in the TwoBoard listing.
     GPReg(u8),
 }
 
