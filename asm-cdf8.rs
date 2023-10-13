@@ -61,10 +61,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     if args.flag_verbose > 3 { println!("args={args:#?}") }
 
     if args.flag_disassemble {
+        let image = std::fs::read(args.arg_image)?;
         if args.flag_twoboard {
-            dis::disassemble(&dis::TwoBoard::new(), &File::open(args.arg_image)?, &mut std::io::stdout(), args.flag_verbose > 0)?;
+            dis::disassemble(&dis::TwoBoard::new(), &image, &mut std::io::stdout(), args.flag_verbose > 0)?;
         } else {
-            dis::disassemble(&dis::OneBoard::new(), &File::open(args.arg_image)?, &mut std::io::stdout(), args.flag_verbose > 0)?;
+            dis::disassemble(&dis::OneBoard::new(), &image, &mut std::io::stdout(), args.flag_verbose > 0)?;
         };
     } else {
         let words = asm::assemble(&File::open(&args.arg_source_file).with_context(format!("source file '{}'", args.arg_source_file.to_string_lossy()))?)?;

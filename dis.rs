@@ -1,30 +1,20 @@
 // Copyright © 2023 David Caldwell <david@porkrind.org>
 
-use std::{error::Error, io::{Read, Write, BufReader}, collections::HashMap};
+use std::{error::Error, io::Write, collections::HashMap};
 
 use crate::cdf8::*;
 
-pub fn disassemble<H,R: ?Sized,W>(hw: &H, input: &R, output: &mut W, show_dump: bool) -> Result<(), Box<dyn Error>>
-where for<'a> &'a R: Read,
-                  W: Write,
-                  H: DecodeInstruction,
+pub fn disassemble<H,W>(hw: &H, input: &[u8], output: &mut W, show_dump: bool) -> Result<(), Box<dyn Error>>
+where W: Write,
+      H: DecodeInstruction,
 {
-    let reader = BufReader::new(input);
-    let mut byte = reader.bytes();
+    let words: Vec<u16> = input.iter()        .step_by(2).map(|b| *b)
+        .zip(             input.iter().skip(1).step_by(2).map(|b| *b))
+        .map(|(msb,lsb)| (msb as u16) << 8 | lsb as u16).collect();
     let mut program: Vec<Instruction> = Vec::new();
-    let mut raw: Vec<u16> = Vec::new();
-    loop {
-        let word = match (byte.next(), byte.next()) {
-            (Some(Ok(high)),  Some(Ok(low))) => (high as u16) << 8 | low as u16,
-            (Some(Err(e)),    _            ) |
-            (_,               Some(Err(e)) ) => Err(e)?,
-            (Some(_),         None         ) => Err(format!("Input has odd number of bytes"))?,
-            (None,            _            ) => break/* normal end*/,
-        };
-
-        let insn = hw.decode(word).map_err(|e| format!("In instruction {:016b} @ {:#o}: {}", word, program.len(), e))?;
+    for (addr, word) in words.iter().enumerate() {
+        let insn = hw.decode(*word).map_err(|e| format!("In instruction {:016b} @ {:#o}: {}", word, addr, e))?;
         program.push(insn);
-        raw.push(word);
     }
     let mut symbols = SymbolTable::new();
     if hw.variant() == ProcessorVariant::OneBoard {
@@ -35,7 +25,7 @@ where for<'a> &'a R: Read,
         label_jumps(&mut program, &mut symbols);
     }
     for (addr, insn) in program.iter().enumerate() {
-        if show_dump { write!(&mut *output, "{:3o} {:016b} ", addr, raw[addr])? }
+        if show_dump { write!(&mut *output, "{:3o} {:016b} ", addr, words[addr])? }
         writeln!(&mut *output, "{label:<10} {}", insn.disassemble(addr as u16)?,
                  label=match symbols.symbol_for_addr(addr as u16) { Some(name) =>  format!("{}:", name), _ => format!("") })?;
     }
