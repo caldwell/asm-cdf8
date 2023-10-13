@@ -16,12 +16,11 @@ mod asm;
 const USAGE: &'static str = r#"
 Usage:
   asm-cdf8 -h
-  asm-cdf8 [-v...] [-h] [-f <format>] [(-o <image> | --msb <msb-image> --lsb <lsb-image>)] <source-file>
-  asm-cdf8 [-v...] [-h] [--twoboard] -d (<image> | --msb <msb-image> --lsb <lsb-image>)
+  asm-cdf8 [-h] [-f <format>] [(-o <image> | --msb <msb-image> --lsb <lsb-image>)] <source-file>
+  asm-cdf8 [-h] -d [--twoboard] [--nodump] (<image> | --msb <msb-image> --lsb <lsb-image>)
 
 Options:
   -h --help              Show this screen.
-  -v --verbose           Be more verbose.
   -d --disassemble       Disassemble microcode image
   -o --output=<image>    Ouput image to <image> instead of stdout.
   -f --format=<format>   Set the output format. <format> can be one of:
@@ -31,15 +30,15 @@ Options:
   --lsb=<lsb-image>      that are 1 byte wide: msb and lsb.
                          When disassembling: Interleave the msb and lsb input
                          images before disassembling.
-
   --twoboard             Use the older "two board" revision instruction set
+  -n --nodump            Don't output the raw address and instruction values
 "#;
 
 #[derive(Debug, Deserialize)]
 struct Args {
-    flag_verbose:     usize,
     flag_disassemble: bool,
     flag_twoboard:    bool,
+    flag_nodump:      bool,
     flag_output:      Option<PathBuf>,
     flag_format:      Format,
     flag_msb:         Option<PathBuf>,
@@ -62,8 +61,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
-    if args.flag_verbose > 3 { println!("args={args:#?}") }
-
     if args.flag_disassemble {
         let image = if let (Some(msb), Some(lsb)) = (args.flag_msb, args.flag_lsb) {
             if std::fs::metadata(&msb)?.len() != std::fs::metadata(&lsb)?.len() {
@@ -75,9 +72,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             std::fs::read(args.arg_image)?
         };
         if args.flag_twoboard {
-            dis::disassemble(&dis::TwoBoard::new(), &image, &mut std::io::stdout(), args.flag_verbose > 0)?;
+            dis::disassemble(&dis::TwoBoard::new(), &image, &mut std::io::stdout(), !args.flag_nodump)?;
         } else {
-            dis::disassemble(&dis::OneBoard::new(), &image, &mut std::io::stdout(), args.flag_verbose > 0)?;
+            dis::disassemble(&dis::OneBoard::new(), &image, &mut std::io::stdout(), !args.flag_nodump)?;
         };
     } else {
         let words = asm::assemble(&File::open(&args.arg_source_file).with_context(format!("source file '{}'", args.arg_source_file.to_string_lossy()))?)?;
