@@ -16,8 +16,8 @@ mod asm;
 const USAGE: &'static str = r#"
 Usage:
   asm-cdf8 -h
-  asm-cdf8 [-v...] [-h] [-f <format>] [-i] [-o <image>] <source-file>
-  asm-cdf8 [-v...] [-h] [--twoboard] -d <image>
+  asm-cdf8 [-v...] [-h] [-f <format>] [(-o <image> | --msb <msb-image> --lsb <lsb-image>)] <source-file>
+  asm-cdf8 [-v...] [-h] [--twoboard] -d (<image> | --msb <msb-image> --lsb <lsb-image>)
 
 Options:
   -h --help              Show this screen.
@@ -26,9 +26,12 @@ Options:
   -o --output=<image>    Ouput image to <image> instead of stdout.
   -f --format=<format>   Set the output format. <format> can be one of:
                          hexdump, binary, ihex, srec  [default: hexdump]
-  -i --interleave        Split the output into 2 byte-wide sections: msb and
-                         lsb. If combined with --output, the output file
-                         names will have ".msb" and ".lsb" appended.
+
+  --msb=<msb-image>      When assembling: Split the output into 2 sections
+  --lsb=<lsb-image>      that are 1 byte wide: msb and lsb.
+                         When disassembling: Interleave the msb and lsb input
+                         images before disassembling.
+
   --twoboard             Use the older \"two board\" revision instruction set
 "#;
 
@@ -39,7 +42,8 @@ struct Args {
     flag_twoboard:    bool,
     flag_output:      Option<PathBuf>,
     flag_format:      Format,
-    flag_interleave:  bool,
+    flag_msb:         Option<PathBuf>,
+    flag_lsb:         Option<PathBuf>,
     arg_source_file:  PathBuf,
     arg_image:        PathBuf,
 }
@@ -61,7 +65,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     if args.flag_verbose > 3 { println!("args={args:#?}") }
 
     if args.flag_disassemble {
-        let image = std::fs::read(args.arg_image)?;
+        let image = if let (Some(msb), Some(lsb)) = (args.flag_msb, args.flag_lsb) {
+            if std::fs::metadata(&msb)?.len() != std::fs::metadata(&lsb)?.len() {
+                Err(format!("Can't interleave {} and {}: files have unequal lengths",
+                            msb.to_string_lossy(), lsb.to_string_lossy()))?
+            }
+            std::fs::read(msb)?.into_iter().zip(std::fs::read(lsb)?.into_iter()).flat_map(|(msb,lsb)| [msb,lsb]).collect()
+        } else {
+            std::fs::read(args.arg_image)?
+        };
         if args.flag_twoboard {
             dis::disassemble(&dis::TwoBoard::new(), &image, &mut std::io::stdout(), args.flag_verbose > 0)?;
         } else {
@@ -72,17 +84,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let bytes: Vec<u8> = words.into_iter().flat_map(|w| vec![(w>>8) as u8, (w & 0xff) as u8]).collect();
 
-        fn maybe_clone_add_ext(maybe_path: &Option<PathBuf>, ext: &str) -> Option<PathBuf> {
-            let Some(ref base) = maybe_path else { return None };
-            let mut new = base.as_os_str().to_owned();
-            new.push(ext);
-            Some(PathBuf::from(new))
-        }
-
         let outs: Vec<(&'static str, Vec<u8>, Option<PathBuf>)> =
-            if args.flag_interleave {
-                vec![("MSB", bytes.iter()        .step_by(2).map(|b| *b).collect(),            maybe_clone_add_ext(&args.flag_output, ".msb")),
-                     ("LSB", bytes.iter().skip(1).step_by(2).map(|b| *b).collect::<Vec<u8>>(), maybe_clone_add_ext(&args.flag_output, ".lsb"))]
+            if let (Some(msb), Some(lsb)) = (args.flag_msb, args.flag_lsb) {
+                vec![("MSB", bytes.iter()        .step_by(2).map(|b| *b).collect(),            Some(msb)),
+                     ("LSB", bytes.iter().skip(1).step_by(2).map(|b| *b).collect::<Vec<u8>>(), Some(lsb))]
             } else {
                 vec![("Big Endian Image", bytes, args.flag_output)]
             };
