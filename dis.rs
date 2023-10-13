@@ -4,7 +4,7 @@ use std::{error::Error, io::{Read, Write, BufReader}, collections::HashMap};
 
 use crate::cdf8::*;
 
-pub fn disassemble<H,R,W>(hw: &H, input: &R, output: &mut W, show_dump: bool) -> Result<(), Box<dyn Error>>
+pub fn disassemble<H,R: ?Sized,W>(hw: &H, input: &R, output: &mut W, show_dump: bool) -> Result<(), Box<dyn Error>>
 where for<'a> &'a R: Read,
                   W: Write,
                   H: DecodeInstruction,

@@ -5,7 +5,7 @@ use std::{error::Error, io::{Read, BufReader, BufRead}, str::FromStr};
 use crate::{cdf8::*, WithContext};
 use crate::dis::SymbolTable; // FIXME
 
-pub fn assemble<R: Read>(input: &R) -> Result<Vec<u16>, Box<dyn Error>>
+pub fn assemble<R: ?Sized>(input: &R) -> Result<Vec<u16>, Box<dyn Error>>
 where for<'a> &'a R: Read
 {
     let reader = BufReader::new(input);
