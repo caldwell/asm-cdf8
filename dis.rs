@@ -4,7 +4,7 @@ use std::{error::Error, io::{Read, Write, BufReader}, collections::HashMap};
 
 use crate::cdf8::*;
 
-pub fn disassemble<H,R,W>(hw: &H, input: &R, output: &mut W) -> Result<(), Box<dyn Error>>
+pub fn disassemble<H,R,W>(hw: &H, input: &R, output: &mut W, show_dump: bool) -> Result<(), Box<dyn Error>>
 where for<'a> &'a R: Read,
                   W: Write,
                   H: DecodeInstruction,
@@ -35,7 +35,8 @@ where for<'a> &'a R: Read,
         label_jumps(&mut program, &mut symbols);
     }
     for (addr, insn) in program.iter().enumerate() {
-        writeln!(&mut *output, "{:3o} {:016b} {label:<10} {}", addr, raw[addr], insn.disassemble(addr as u16)?,
+        if show_dump { write!(&mut *output, "{:3o} {:016b} ", addr, raw[addr])? }
+        writeln!(&mut *output, "{label:<10} {}", insn.disassemble(addr as u16)?,
                  label=match symbols.symbol_for_addr(addr as u16) { Some(name) =>  format!("{}:", name), _ => format!("") })?;
     }
     Ok(())
