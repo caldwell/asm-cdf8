@@ -21,16 +21,20 @@ Usage:
 
 Options:
   -h --help              Show this screen.
-  -d --disassemble       Disassemble microcode image
+
+ Asssembly Options:
   -o --output=<image>    Ouput image to <image> instead of stdout.
   -f --format=<format>   Set the output format. <format> can be one of:
                          hexdump, binary, ihex, srec  [default: hexdump]
 
-  --msb=<msb-image>      When assembling: Split the output into 2 sections
-  --lsb=<lsb-image>      that are 1 byte wide: msb and lsb.
+ Common Options:
+  -m --msb=<msb-image>   When assembling: Split the output into 2 sections
+  -l --lsb=<lsb-image>   that are 1 byte wide: msb and lsb.
                          When disassembling: Interleave the msb and lsb input
                          images before disassembling.
-  --twoboard             Use the older "two board" revision instruction set
+ Disassembly Options:
+  -d --disassemble       Disassemble microcode image
+  -2 --twoboard          Use the older "two board" revision instruction set
   -n --nodump            Don't output the raw address and instruction values
 "#;
 
