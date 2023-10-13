@@ -32,7 +32,7 @@ Options:
                          When disassembling: Interleave the msb and lsb input
                          images before disassembling.
 
-  --twoboard             Use the older \"two board\" revision instruction set
+  --twoboard             Use the older "two board" revision instruction set
 "#;
 
 #[derive(Debug, Deserialize)]
