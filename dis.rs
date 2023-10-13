@@ -41,15 +41,16 @@ where for<'a> &'a R: Read,
     Ok(())
 }
 
-struct SymbolTable {
-    symbols: HashMap<String, u16>,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SymbolTable {
+    pub symbols: HashMap<String, u16>,
 }
 
 impl SymbolTable {
-    fn new() -> SymbolTable {
+    pub fn new() -> SymbolTable {
         SymbolTable { symbols: HashMap::new() }
     }
-    fn symbol_for_addr(&self, addr: u16) -> Option<String> {
+    pub fn symbol_for_addr(&self, addr: u16) -> Option<String> {
         // We could index or cache this but who cares, the rom only holds like 500 instructions
         if let Some((name, _)) = self.symbols.iter().find(|(_, a)| **a == addr) {
             Some(name.clone())
@@ -57,10 +58,11 @@ impl SymbolTable {
             None
         }
     }
-    fn addr_for_symbol(&self, name: &str) -> Option<u16> {
+    #[allow(unused)]
+    pub fn addr_for_symbol(&self, name: &str) -> Option<u16> {
         self.symbols.get(name).copied()
     }
-    fn insert(&mut self, name: String, addr: u16) {
+    pub fn insert(&mut self, name: String, addr: u16) {
         self.symbols.insert(name, addr);
     }
 }
@@ -89,6 +91,9 @@ impl Instruction {
             Instruction::Jump { when: false, condition: Condition::NoOperation, effective_address } => {
                 format!("{:<8} {}", "JUMP", effective_address)
             },
+            Instruction::Jump { when: false, condition, effective_address: JumpDest::Myself } => {
+                format!("{:<8} {}", "WAIT", condition)
+            }
             Instruction::Jump { when: false, condition, effective_address: JumpDest::Absolute(effective_address) } if *effective_address == addr => {
                 format!("{:<8} {}", "WAIT", condition)
             },

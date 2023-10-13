@@ -1,6 +1,6 @@
 // Copyright © 2023 David Caldwell <david@porkrind.org>
 
-use strum_macros::{Display,FromRepr};
+use strum_macros::{Display,FromRepr, EnumString};
 
 pub const OPCODE_MASK: u16 = 0b1100_0000_0000_0000;
 
@@ -22,7 +22,7 @@ pub enum RawOpcodeTwoBoard {
     Move          = 0b1100_0000_0000_0000,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone, PartialEq, Eq)]
 pub enum Instruction {
     Jump{ when: bool, condition: Condition, effective_address: JumpDest },
     FunctionTimer { timer: Timer, function: Function },
@@ -30,10 +30,11 @@ pub enum Instruction {
     Move{ source: MoveSource, dest: DestRegister },
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone, PartialEq, Eq)]
 pub enum JumpDest {
     Absolute(u16),
     Symbol(String),
+    Myself, // For WAIT instruction
 }
 
 impl std::fmt::Display for JumpDest {
@@ -41,6 +42,7 @@ impl std::fmt::Display for JumpDest {
         Ok(match self {
             JumpDest::Absolute(a) => write!(f, "{:o}", a)?,
             JumpDest::Symbol(s) => write!(f, "{}", s.clone())?,
+            JumpDest::Myself => write!(f, "Myself")?,
         })
     }
 }
@@ -59,26 +61,26 @@ pub const MOVE_SOURCE_REG:          u16 = 0b0000_0001_1110_0000;
 pub const MOVE_DEST_GP:             u16 = 0b0000_0000_0001_0000;
 pub const MOVE_DEST_REG:            u16 = 0b0000_0000_0000_1111;
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone, PartialEq, Eq)]
 pub struct Timer {
     pub negative_count: u8,
     pub clock_rate: ClockRate,
 }
 
-#[derive(Debug, Clone, Display)]
+#[derive(Debug, Clone, Display, PartialEq, Eq)]
 pub enum ClockRate {
     #[strum(serialize = "MS")] Millisecond,
     #[strum(serialize = "BT")] Microsecond, // BT???
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MoveSource {
     Literal(u8),
     Register(SourceRegister),
     Constant(u8),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]
 pub enum SourceRegister {
     #[strum(serialize = "DISKIN")]  RWFromDSU = 0,
@@ -90,7 +92,7 @@ pub enum SourceRegister {
     GPReg(u8),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]
 pub enum DestRegister {
     #[strum(serialize = "DISKOUT")]  RWToDSU = 0,
@@ -105,7 +107,7 @@ pub enum DestRegister {
     GPReg(u8),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]
 pub enum Condition {
     #[strum(serialize = "NOP0")]        NoOperation = 0,
@@ -151,7 +153,7 @@ pub enum Condition {
     #[strum(serialize = "INOP")]        FileInop,              // 0o16
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]
 pub enum ALUMode {
     // Name in code listing               74LS181 manual (but converted to modern PL operators:
@@ -211,7 +213,7 @@ pub enum ALUMode {
     /*_ = 0b00_1111,*/                   /* 0 0 1 1 1 1 -> F = A                      */
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]
 pub enum Function {
     HEADIN       = 0o00, // SET THE HEAD DIRECTION TO IN
