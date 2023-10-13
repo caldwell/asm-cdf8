@@ -122,7 +122,7 @@ impl FromStr for Instruction {
             },
             "JUMP" => {(Instruction::Jump { when: false, condition: Condition::NoOperation, effective_address: JumpDest::Symbol(rest.to_owned()) }, "")},
             "NOP"  => {(Instruction::Jump { when: true,  condition: Condition::NoOperation, effective_address: JumpDest::Absolute(0) }, rest)},
-            "WAIT" => {(Instruction::Jump { when: true,  condition: rest.parse::<Condition>()?, effective_address: JumpDest::Myself }, "")},
+            "WAIT" => {(Instruction::Jump { when: false, condition: rest.parse::<Condition>()?, effective_address: JumpDest::Myself }, "")},
             "F" => {
                 (match rest.split_once(',').unwrap_or((rest, "")) {
                     ("", alu_s) => Instruction::FunctionALU { function: Function::NOP, alu: Some(alu_s.parse::<ALUMode>()?) },
@@ -296,7 +296,7 @@ mod test {
                                                                                                         effective_address: JumpDest::Symbol("addr33".to_owned()) } })),
                                ("           WAIT     TIMER",
                                 Line::LabeledInstruction(LabeledInstruction { label: None,
-                                                                              insn: Instruction::Jump { when: true,
+                                                                              insn: Instruction::Jump { when: false,
                                                                                                         condition: Condition::TimerDone,
                                                                                                         effective_address: JumpDest::Myself } })),
                                ("           CF       STEP,11MS",
@@ -327,6 +327,32 @@ mod test {
                                 Line::SymbolDeclaration(SymbolDeclaration { name: "David".to_string(), value: 0o777 })),
         ].into_iter() {
             assert_eq!(test.parse::<Line>().expect("Parsing failed"), expect);
+        }
+    }
+
+    #[test]
+    fn emit_test() {
+        let mut syms = SymbolTable::new();
+        syms.insert("david".to_string(), 0xdc);
+
+        for (expect, input) in vec![
+            (0b01_10001_0_0000_0000, Instruction::Jump { when: false, condition: Condition::ACK, effective_address: JumpDest::Myself }),
+            (0b00_11010_1_0010_1000, Instruction::Jump { when: true, condition: Condition::WriteProtect, effective_address: JumpDest::Absolute(0x128) }),
+            (0b01_10011_0_1010_1010, Instruction::Jump { when: false, condition: Condition::ReadDataCmd, effective_address: JumpDest::Absolute(0xaa) }),
+            (0b00_00110_0_1101_1100, Instruction::Jump { when: true, condition: Condition::IndexHole, effective_address: JumpDest::Symbol("david".to_string()) }),
+
+            (0b10_10111_00_0_00_0000, Instruction::FunctionALU { alu: None, function: Function::NOP }),
+            (0b10_00101_01_0_11_1001, Instruction::FunctionALU { alu: Some(ALUMode::XORBAR), function: Function::ENACRC }),
+            (0b10_00011_1_0011_1100, Instruction::FunctionTimer { timer: Timer{ negative_count:60, clock_rate: ClockRate::Millisecond}, function: Function::WRITEGATE }),
+
+            (0b11_1_110_11100_11010, Instruction::Move { source: MoveSource::Literal(0xdc), dest: DestRegister::GPReg(0xa) }),
+            (0b11_0_000_11011_00101, Instruction::Move { source: MoveSource::Register(SourceRegister::GPReg(0xb)), dest: DestRegister::DriveSelReg }),
+            (0b11_0_000_00101_01000, Instruction::Move { source: MoveSource::Register(SourceRegister::DReg), dest: DestRegister::HeadLoadRegister }),
+        ].into_iter() {
+            let words = emit(vec![input.clone()], syms.clone()).expect("emit failed for");
+            if words[0] != expect {
+                panic!("Emit mismatch for {0:?}\n  left: {1:5} {1:#08o} {1:#018b}\n right: {2:5} {2:#08o} {2:#018b}\n", input, expect, words[0]);
+            }
         }
     }
 }
