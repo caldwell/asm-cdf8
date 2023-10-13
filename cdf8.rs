@@ -110,47 +110,47 @@ pub enum DestRegister {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]
 pub enum Condition {
-    #[strum(serialize = "NOP0")]        NoOperation = 0,
-    #[strum(serialize = "RDYREQ")]      ByteRdyRqst,
-
-    #[strum(serialize = "FILL")]        FillBfrCmd = 3,
-    #[strum(serialize = "EMPTY")]       EmptyBfrCmd,
-    #[strum(serialize = "NOTREADY")]    Ready,
-    #[strum(serialize = "HOLE")]        IndexHole,
-    #[strum(serialize = "CLKDOWN")]     HeadTimedOut,          // "Timed Head Down (20MS)" in listing comments
-    #[strum(serialize = "CRCERR")]      CRCError,
-    #[strum(serialize = "D0SELF")]      Drive1Sel,
-    #[strum(serialize = "")]            IDClockPattern,
-
-
-    #[strum(serialize = "TIMER")]       TimerDone = 0o15,
-
-    #[strum(serialize = "DOWN")]        SelHeadDown = 0o17,
-    #[strum(serialize = "D5LOAD")]      D5Load,
-    #[strum(serialize = "ACK")]         ACK,
-    #[strum(serialize = "TERMINATE")]   Terminate,
-    #[strum(serialize = "READ")]        ReadDataCmd,
-    #[strum(serialize = "WRITE")]       WriteDataCmd,
-    #[strum(serialize = "SEEK")]        SeekCmd,
-    #[strum(serialize = "FORMAT")]      FrmtDiskCmd = 0o26,    // IF DF INHOUSE
-    //#[strum(serialize = "READAFTW")]  ReadAfterWrite = 0o26, // Not inhouse??
-    #[strum(serialize = "D1SELF")]      Drive2Sel,
-    #[strum(serialize = "D2SELF")]      Drive3Sel,
-    #[strum(serialize = "COMAND")]      CmdRdy,
-    #[strum(serialize = "WRITEPROT")]   WriteProtect,
-    #[strum(serialize = "WRITEDEL")]    WriteDataCmd2,
-    #[strum(serialize = "TRACK00")]     Track00,
+    #[strum(serialize = "NOP0")]        NoOperation         = 0o00,      // 0, 0
+    #[strum(serialize = "RDYREQ")]      ByteRdyRqst         = 0o01,      // 0, 1
+    // Unused                                               = 0o02,      // 0, 2
+    #[strum(serialize = "FILL")]        FillBfrCmd          = 0o03,      // 0, 3
+    #[strum(serialize = "EMPTY")]       EmptyBfrCmd         = 0o04,      // 0, 4
+    #[strum(serialize = "NOTREADY")]    NotReady            = 0o05,      // 0, 5
+    #[strum(serialize = "HOLE")]        IndexHole           = 0o06,      // 0, 6
+    #[strum(serialize = "CLKDOWN")]     HeadTimedOut        = 0o07,      // 0, 7 "Timed Head Down (20MS)" in listing comments
+    #[strum(serialize = "CRCERR")]      CRCError            = 0o10,      // 0, 8
+    #[strum(serialize = "D0SELF")]      Drive1SelBar        = 0o11,      // 0, 9
+    #[strum(serialize = "")]            IDClockPattern      = 0o12,      // 0,10
+    // Unused                                               = 0o13,      // 0,11
+    // Unused                                               = 0o14,      // 0,12
+    #[strum(serialize = "TIMER")]       TimerDone           = 0o15,      // 0,13
+    // Unused                                               = 0o16,      // 0,14
+    #[strum(serialize = "DOWN")]        SelHeadDown         = 0o17,      // 0,15
+    #[strum(serialize = "D5LOAD")]      D5Load              = 0o20,      // 1, 0
+    #[strum(serialize = "ACK")]         ACK                 = 0o21,      // 1, 1
+    #[strum(serialize = "TERMINATE")]   TerminateBar        = 0o22,      // 1, 2
+    #[strum(serialize = "READ")]        ReadDataCmd         = 0o23,      // 1, 3
+    #[strum(serialize = "WRITE")]       WriteDataCmd        = 0o24,      // 1, 4
+    #[strum(serialize = "SEEK")]        SeekCmd             = 0o25,      // 1, 5
+    #[strum(serialize = "FORMAT")]      FrmtDiskCmd         = 0o26,      // 1, 6 IF DF INHOUSE
+    //#[strum(serialize = "READAFTW")]  ReadAfterWrite      = 0o26,      // 1, 6 Not inhouse??
+    #[strum(serialize = "D1SELF")]      Drive2SelBar        = 0o27,      // 1, 7
+    #[strum(serialize = "D2SELF")]      Drive3SelBar        = 0o30,      // 1, 8
+    #[strum(serialize = "COMMAND")]     CmdRdy              = 0o31,      // 1, 9
+    #[strum(serialize = "WRITEPROT")]   WriteProtect        = 0o32,      // 1,10
+    #[strum(serialize = "WRITEDEL")]    WriteDeletedDataCmd = 0o33,      // 1,11
+    #[strum(serialize = "TRACK00")]     Track00             = 0o34,      // 1,12
     #[strum(serialize = "C",
-            serialize = "CS")]          ALUCarry,
-    #[strum(serialize = "EQ")]          ALUEqual,
-    #[strum(serialize = "DSSELF")]      Drive4Sel,
+            serialize = "CS")]          ALUCarry            = 0o35,      // 1,13
+    #[strum(serialize = "EQ")]          ALUEqual            = 0o36,      // 1,14
+    #[strum(serialize = "DSSELF")]      Drive4Sel           = 0o37,      // 1,15
 
     //                                  Two Board
-    #[strum(serialize = "MEMRDY")]      MemoryReady,           // 0o2
-    #[strum(serialize = "SECTOR")]      SectorHeaderMark,      // 0o12
-    #[strum(serialize = "DATAID")]      DataId,                // 0o13
-    #[strum(serialize = "DELDATA")]     DelData,               // 0o14
-    #[strum(serialize = "INOP")]        FileInop,              // 0o16
+    #[strum(serialize = "MEMRDY")]      MemoryReady         = 0o40+0o2,  // 0, 2
+    #[strum(serialize = "SECTOR")]      SectorHeaderMark    = 0o40+0o12, // 0,10
+    #[strum(serialize = "DATAID")]      DataId              = 0o40+0o13, // 0,11
+    #[strum(serialize = "DELDATA")]     DelData             = 0o40+0o14, // 0,12
+    #[strum(serialize = "INOP")]        FileInop            = 0o40+0o16, // 0,14
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
@@ -216,37 +216,50 @@ pub enum ALUMode {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]
 pub enum Function {
-    HEADIN       = 0o00, // SET THE HEAD DIRECTION TO IN
-    HEADOUT      = 0o01, // SET THE HEAD DIRECTION TO OUT
-    STEP         = 0o02, // STEP THE HEAD IN THE PROPER DIRECTION
-    WRITEGATE    = 0o03, // SET THE WRITE GATE
-    ENAWRITE     = 0o04, // ENABLE THE WRITE LOGIC
-    ENACRC       = 0o05, // ENABLE CRC LOGIC
-    DISCRC       = 0o06, // DISKABLE THE CRC LOGIC
-    ENASHIFT     = 0o07, // ENABLE SHIFT CRC
-    DISSHIFT     = 0o10, // DISABLE SHIFT CRC
-    LOAD         = 0o11, // LOAD THE HEAD
-    UNLOAD       = 0o12, // UNLOAD THE HEAD
-    SETDEVCHECK  = 0o13, // SET DEVICE CHECK ERROR
-    SETDATACRC   = 0o14, // SET THE DATA CRC ERROR FLOP
-    SETSEEK      = 0o15, // SET SEEK ERROR FLOP
-    SETWRITEPROT = 0o16, // SET WRITE PROTECT ERROR FLOP
-    SETNOTRDY    = 0o17, // SET SELECTED DRIVE NOT READY
-    CMDDONE      = 0o20, // COMMAND DONE PULSE
-    SETDELDATA   = 0o21, // SET THE DELETED DATA READ FLAG
-    CLEARSTATUS  = 0o22, // CLEAR THE STATUS REGISTER
-    SETCONRDY    = 0o23, // SET CONTROLER READY
-    RESETINOP    = 0o24, // REST FILE INOPERABLE
-    SETCOMBINED  = 0o25, // SET THE COMBINED ERROR BIT IN THE INTERFACE
-    CLEARCMD     = 0o26, // CLEAR THE COMMAND REGISTER
-    NOP          = 0o27,
-    RESETWRITE   = 0o30, // RESET WRITE ENABLE/GATE
-    INCMAR       = 0o31, // INCREMENT THE MEMORY ADDRESS REGISTER
-    CDF0         = 0o32, // SET TO JUMP TO ROM FIELD00
-    CDF1         = 0o33, // SET TO JUMP TO ROM FIELD01
-    SETABV43     = 0o34, // ABOVE TRACK 43 TO DISK DRIVES
-    SETBELW43    = 0o35, // BELOW TRACK 43,
-    ALSTATUS     = 0o36, // SEND STATS ON COMMAND COMPLETION
+    HEADIN       = 0o00, // 0, 0 SET THE HEAD DIRECTION TO IN
+    HEADOUT      = 0o01, // 0, 1 SET THE HEAD DIRECTION TO OUT
+    STEP         = 0o02, // 0, 2 STEP THE HEAD IN THE PROPER DIRECTION
+    WRITEGATE    = 0o03, // 0, 3 SET THE WRITE GATE
+    ENAWRITE     = 0o04, // 0, 4 ENABLE THE WRITE LOGIC
+    ENACRC       = 0o05, // 0, 5 ENABLE CRC LOGIC
+    DISCRC       = 0o06, // 0, 6 DISKABLE THE CRC LOGIC
+    ENASHIFT     = 0o07, // 0, 7 ENABLE SHIFT CRC
+    DISSHIFT     = 0o10, // 0, 8 DISABLE SHIFT CRC
+    // Unused               0, 9
+    SETSEEK      = 0o12, // 0,10 SET SEEK ERROR FLOP
+    SETDEVCHECK  = 0o13, // 0,11 SET DEVICE CHECK ERROR
+    SETDATACRC   = 0o14, // 0,12 SET THE DATA CRC ERROR FLOP
+    CLEARTIMER   = 0o15, // 0,13 CLEAR TIMER REGISTER
+    SETWRITEPROT = 0o16, // 0,14 SET WRITE PROTECT ERROR FLOP
+    SETNOTRDY    = 0o17, // 0,15 SET SELECTED DRIVE NOT READY
+    CMDDONE      = 0o20, // 1, 0 COMMAND DONE PULSE
+    SETDELDATA   = 0o21, // 1, 1 SET THE DELETED DATA READ FLAG
+    CLEARSTATUS  = 0o22, // 1, 2 CLEAR THE STATUS REGISTER
+    SETCONRDY    = 0o23, // 1, 3 SET CONTROLER READY
+    // Unused               1, 4
+    SETCOMBINED  = 0o25, // 1, 5 SET THE COMBINED ERROR BIT IN THE INTERFACE
+    CLEARCMD     = 0o26, // 1, 6 CLEAR THE COMMAND REGISTER
+    NOP          = 0o27, // 1, 7
+    RESETWRITE   = 0o30, // 1, 8 RESET WRITE ENABLE/GATE
+    INCMAR       = 0o31, // 1, 9 INCREMENT THE MEMORY ADDRESS REGISTER
+    SETSTPRES    = 0o32, // 1,10 Set Status Present flop
+    SETDIAGOK    = 0o33, // 1,11 Set Diagnostic ok LED
+    SETSOFTCRC   = 0o34, // 1,12 Set Soft CRC Error LED
+    SETDRIVECK   = 0o35, // 1,13 Set Drive Check LED
+    // Unused               1,14
+    // Unused               1,15
+
+    // TwoBoard (offset by 0o40 (0x20)
+    LOAD         = 0o40+0o11, // 0, 9 LOAD THE HEAD
+    UNLOAD       = 0o40+0o12, // 0,10 UNLOAD THE HEAD
+    SETSEEK2     = 0o40+0o15, // 0,13 SET SEEK ERROR FLOP
+    RESETINOP    = 0o40+0o24, // 1, 4 REST FILE INOPERABLE
+    CDF0         = 0o40+0o32, // 1,10 SET TO JUMP TO ROM FIELD00
+    CDF1         = 0o40+0o33, // 1,11 SET TO JUMP TO ROM FIELD01
+    SETABV43     = 0o40+0o34, // 1,12 ABOVE TRACK 43 TO DISK DRIVES
+    SETBELW43    = 0o40+0o35, // 1,13 BELOW TRACK 43,
+    ALSTATUS     = 0o40+0o36, // 1,14 SEND STATS ON COMMAND COMPLETION
+
 }
 
 // This was a thing in the two board version (replaced by real immediates in the one board mv instruction)

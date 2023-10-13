@@ -282,7 +282,7 @@ mod test {
                                ("           JFC      addr13,TERMINATE; This is a comment with no space",
                                 Line::LabeledInstruction(LabeledInstruction { label: None,
                                                                               insn: Instruction::Jump { when: false,
-                                                                                                        condition: Condition::Terminate,
+                                                                                                        condition: Condition::TerminateBar,
                                                                                                         effective_address: JumpDest::Symbol("addr13".to_owned()) } })),
                                ("           JTC      addr425,D5LOAD",
                                 Line::LabeledInstruction(LabeledInstruction { label: None,

@@ -164,23 +164,18 @@ impl TwoBoard {
         let condition = (word & 0b0001_1111_0000_0000) >> 8;
         Ok(Instruction::Jump {
             when: (word & 0b0010_0000_0000_0000) == 0,
-            condition: match condition {
-                // Special cases where TwoBoard is different from OneBoard
-                0o2  => Condition::MemoryReady,
-                0o12 => Condition::SectorHeaderMark,
-                0o13 => Condition::DataId,
-                0o14 => Condition::DelData,
-                0o16 => Condition::FileInop,
-                // These are the same as OneBoard
-                _    => Condition::from_repr(condition as u8).ok_or_else(|| format!("Unknown condition {} {:#07b} {:#02o}", condition, condition, condition))?
-            },
+            condition: Condition::from_repr(0o40 + condition as u8) // Try this range first, they are conditions where TwoBoard differs
+                .or_else(|| Condition::from_repr(condition as u8))
+                .ok_or_else(|| format!("Unknown condition {} {:#07b} {:#02o}", condition, condition, condition))?,
             effective_address: JumpDest::Absolute(word & 0b0000_0000_1111_1111)
         })
     }
 
     fn decode_function(&self, word: u16) -> Result<Function, Box<dyn Error>> {
         let func = ((word & 0b00_11111_0_0000_0000) >> 9) as u8;
-        Ok(Function::from_repr(func).ok_or_else(|| format!("Unknown function {} {:#07b} {:#2o}", func, func, func))?)
+        Ok(Function::from_repr(0o40 + func) // Try this range first, they are functions where TwoBoard differs
+            .or_else(|| Function::from_repr(func))
+            .ok_or_else(|| format!("Unknown function {} {:#07b} {:#2o}", func, func, func))?)
     }
 
     fn decode_funct_timer(&self, word: u16) -> Result<Instruction, Box<dyn Error>> {
@@ -351,5 +346,37 @@ mod test {
             }
             assert_eq!(mode as u8, rom_entry);
         };
+    }
+
+    #[test]
+    fn two_board_functions() {
+        let two_board = TwoBoard::new();
+        for (word, function) in [
+        (0b1001001000000000, Function::LOAD     ),
+            (0b1001010000000000, Function::UNLOAD   ),
+            (0b1001101000000000, Function::SETSEEK2 ),
+            (0b1010100000000000, Function::RESETINOP),
+            (0b1011010000000000, Function::CDF0     ),
+            (0b1011011000000000, Function::CDF1     ),
+            (0b1011100000000000, Function::SETABV43 ),
+            (0b1011101000000000, Function::SETBELW43),
+            (0b1011110000000000, Function::ALSTATUS ),
+        ].into_iter() {
+            assert_eq!(two_board.decode(word).expect("decode"), Instruction::FunctionALU { alu: None, function });
+        }
+    }
+
+    #[test]
+    fn two_board_conditions() {
+        let two_board = TwoBoard::new();
+        for (word, condition) in [
+            (0b00_1_00010_0110_1010, Condition::MemoryReady),
+            (0b00_1_01010_0110_1010, Condition::SectorHeaderMark),
+            (0b00_1_01011_0110_1010, Condition::DataId),
+            (0b00_1_01100_0110_1010, Condition::DelData),
+            (0b00_1_01110_0110_1010, Condition::FileInop),
+        ].into_iter() {
+            assert_eq!(two_board.decode(word).expect("decode"), Instruction::Jump { when: false, condition, effective_address: JumpDest::Absolute(0o152) });
+        }
     }
 }
