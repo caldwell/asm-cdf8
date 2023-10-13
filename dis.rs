@@ -35,7 +35,7 @@ where for<'a> &'a R: Read,
         label_jumps(&mut program, &mut symbols);
     }
     for (addr, insn) in program.iter().enumerate() {
-        writeln!(&mut *output, "{label:<10} {:3o} {:016b} {}", addr, raw[addr], insn.disassemble(addr as u16)?,
+        writeln!(&mut *output, "{:3o} {:016b} {label:<10} {}", addr, raw[addr], insn.disassemble(addr as u16)?,
                  label=match symbols.symbol_for_addr(addr as u16) { Some(name) =>  format!("{}:", name), _ => format!("") })?;
     }
     Ok(())
