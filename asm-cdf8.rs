@@ -17,7 +17,7 @@ const USAGE: &'static str = r#"
 Usage:
   asm-cdf8 -h
   asm-cdf8 [-h] [-f <format>] [(-o <image> | --msb <msb-image> --lsb <lsb-image>)] <source-file>
-  asm-cdf8 [-h] -d [--twoboard] [--nodump] (<image> | --msb <msb-image> --lsb <lsb-image>)
+  asm-cdf8 [-h] -d [--twoboard] [--nodump] [--details] (<image> | --msb <msb-image> --lsb <lsb-image>)
 
 Options:
   -h --help              Show this screen.
@@ -36,6 +36,7 @@ Options:
   -d --disassemble       Disassemble microcode image
   -2 --twoboard          Use the older "two board" revision instruction set
   -n --nodump            Don't output the raw address and instruction values
+  -c --details           Include a list of processor "constants" up front
 "#;
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +44,7 @@ struct Args {
     flag_disassemble: bool,
     flag_twoboard:    bool,
     flag_nodump:      bool,
+    flag_details:     bool,
     flag_output:      Option<PathBuf>,
     flag_format:      Format,
     flag_msb:         Option<PathBuf>,
@@ -76,9 +78,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             std::fs::read(args.arg_image)?
         };
         if args.flag_twoboard {
-            dis::disassemble(&dis::TwoBoard::new(), &image, &mut std::io::stdout(), !args.flag_nodump)?;
+            dis::disassemble(&dis::TwoBoard::new(), &image, &mut std::io::stdout(), !args.flag_nodump, args.flag_details)?;
         } else {
-            dis::disassemble(&dis::OneBoard::new(), &image, &mut std::io::stdout(), !args.flag_nodump)?;
+            dis::disassemble(&dis::OneBoard::new(), &image, &mut std::io::stdout(), !args.flag_nodump, args.flag_details)?;
         };
     } else {
         let words = asm::assemble(&File::open(&args.arg_source_file).with_context(format!("source file '{}'", args.arg_source_file.to_string_lossy()))?)?;
@@ -187,7 +189,7 @@ mod test {
             0x85, 0xec, 0x5b, 0xe1, 0x41, 0x88, 0xe9, 0x92, 0x40, 0x0b
         ];
 
-        dis::disassemble(&dis::OneBoard::new(), &image[..], &mut dis_bytes, false).expect("disassemble failed");
+        dis::disassemble(&dis::OneBoard::new(), &image[..], &mut dis_bytes, false, false).expect("disassemble failed");
         println!("disassembly={}", String::from_utf8(dis_bytes.clone()).expect("utf8"));
         let image_out = asm::assemble(&dis_bytes[..]).expect("assemble failed");
 

@@ -2,9 +2,11 @@
 
 use std::{error::Error, io::Write, collections::HashMap};
 
+use strum::{IntoEnumIterator, EnumMessage};
+
 use crate::cdf8::*;
 
-pub fn disassemble<H,W>(hw: &H, input: &[u8], output: &mut W, show_dump: bool) -> Result<(), Box<dyn Error>>
+pub fn disassemble<H,W>(hw: &H, input: &[u8], output: &mut W, show_dump: bool, dump_constants: bool) -> Result<(), Box<dyn Error>>
 where W: Write,
       H: DecodeInstruction,
 {
@@ -23,6 +25,12 @@ where W: Write,
         // implement that since we already have an actual printout of the TwoBoard microcode source (with
         // comments!), and since we don't actually have any TwoBoard hardware anyway.
         label_jumps(&mut program, &mut symbols);
+    }
+    if dump_constants {
+        for line in hw.dump_constants().split('\n') {
+            writeln!(&mut *output, "{}", format!("{c:<width$}{line}", width=if show_dump { 21 } else { 0 }, c="").trim_end())?;
+        }
+        writeln!(&mut *output, "\n\n{0:;<60}\n;; Main Code\n{0:;<60}\n", "")?;
     }
     for (addr, insn) in program.iter().enumerate() {
         if show_dump { write!(&mut *output, "{:3o} {:016b} ", addr, words[addr])? }
@@ -140,6 +148,7 @@ pub enum ProcessorVariant {
 pub trait DecodeInstruction {
     fn variant(&self) -> ProcessorVariant;
     fn decode(&self, word: u16) -> Result<Instruction, Box<dyn Error>>;
+    fn dump_constants(&self) -> String;
 }
 
 pub struct TwoBoard {
@@ -154,6 +163,9 @@ impl DecodeInstruction for TwoBoard {
             RawOpcodeTwoBoard::FunctionALU   => self.decode_funct_alu(word)?,
             RawOpcodeTwoBoard::Move          => self.decode_move(word)?,
         })
+    }
+    fn dump_constants(&self) -> String {
+        todo!();
     }
 }
 
@@ -247,6 +259,49 @@ impl DecodeInstruction for OneBoard {
             RawOpcodeOneBoard::FunctionALUTimer => self.decode_funct_alu_timer(word)?,
             RawOpcodeOneBoard::Move             => self.decode_move(word)?,
         })
+    }
+
+    // This heavily abuses doc strings in cdf8 (since we aren't generating library docs with them). It uses
+    // strum to pull out the doc strings for each enum variant and format so that comments in the source go
+    // all the way through and come out in the dump. It's kinda gross but it looks very nice.
+    fn dump_constants(&self) -> String {
+        let mut out = String::new();
+
+        out.push_str(&format!("{0:;<60}\n;; Functions\n{0:;<60}\n", ""));
+        for f in Function::iter() {
+            if (f as u8) < 0o40 {
+                out.push_str(&format!("{name:15} = {val:5o}           ;; {doc}\n", name=f.to_string(), val=f as u8, doc=f.get_documentation().unwrap().trim()));
+            }
+        }
+
+        out.push_str(&format!("\n\n{0:;<60}\n;; Conditions\n{0:;<60}\n", ""));
+        for c in Condition::iter() {
+            if (c as u8) < 0o40 {
+                out.push_str(&format!("{name:15} = {val:5o}           ;; {doc}\n", name=c.to_string(), val=c as u8, doc=c.get_documentation().unwrap().trim()));
+            }
+        }
+
+        out.push_str(&format!("\n\n{0:;<60}\n;; ALU\n{0:;<60}\n", ""));
+        for a in ALUMode::iter() {
+            let mode_def = format!("{name:15} = {val:5o}", name=a.to_string(), val=a as u8);
+            let doc = a.get_documentation().unwrap().trim_end();
+            let mut it = doc.split("\n").peekable();
+            while let Some(line) = it.next()  {
+                out.push_str(&format!("{:35};; {}\n", if it.peek().is_none() {&mode_def} else {""}, line.trim_end()));
+            }
+        }
+
+        out.push_str(&format!("\n\n{0:;<60}\n;; Source Registers\n{0:;<60}\n", ""));
+        for s in SourceRegister::iter() {
+            out.push_str(&format!("{name:15} = {val:5o}           ;; {doc:?}\n", name=s.to_string(), val=s.as_u8(), doc=s));
+        }
+
+        out.push_str(&format!("\n\n{0:;<60}\n;; Destination Registers\n{0:;<60}\n", ""));
+        for d in DestRegister::iter() {
+            out.push_str(&format!("{name:15} = {val:5o}           ;; {doc:?}\n", name=d.to_string(), val=d.as_u8(), doc=d));
+        }
+
+        out
     }
 }
 
