@@ -92,7 +92,16 @@ pub enum SourceRegister {
     GPReg(u8),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
+pub trait ToU8 {
+    fn as_u8(&self) -> u8 {
+        // This (crazily) is how the rust Reference says to get the discriminant (can't do plain `as u8` because of SourceRegister::GPReg)
+        // https://doc.rust-lang.org/reference/items/enumerations.html#pointer-casting
+        unsafe { *(*&self as *const Self as *const u8) }
+    }
+}
+impl ToU8 for SourceRegister {}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, EnumIter, Display)]
 #[repr(u8)]
 pub enum DestRegister {
     #[strum(serialize = "DISKOUT")]  RWToDSU = 0,
@@ -106,6 +115,8 @@ pub enum DestRegister {
     #[strum(serialize = "HEADLOAD")] HeadLoadRegister = 8, // I made up the serialized name because it didn't exist in the TwoBoard listing.
     GPReg(u8),
 }
+
+impl ToU8 for DestRegister {}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, FromRepr, EnumString, Display)]
 #[repr(u8)]

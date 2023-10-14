@@ -82,12 +82,12 @@ fn emit(program: Vec<Instruction>, symbols:SymbolTable) -> Result<Vec<u16>, Box<
                   | 0b00_11_1111_111_0_0000 & match source {
                       MoveSource::Literal(byte) => MOVE_SOURCE_LITERAL | (byte as u16) << 5,
                       MoveSource::Register(SourceRegister::GPReg(r)) => MOVE_SOURCE_GP | (r as u16) << 5,
-                      MoveSource::Register(r) => ((unsafe { *(&r as *const SourceRegister as *const u8) }) as u16) << 5,
+                      MoveSource::Register(r) => (r.as_u8() as u16) << 5,
                       MoveSource::Constant(_) => Err(format!("The OneBoard hardware has no constant rom"))?,
                   }
                   | 0b00_00_00000_000_1_1111 & match dest {
                       DestRegister::GPReg(r) => MOVE_DEST_GP | (r as u16),
-                      r => (unsafe { *(&r as *const DestRegister as *const u8) }) as u16,
+                      r => r.as_u8() as u16,
                   }
             },
         })
